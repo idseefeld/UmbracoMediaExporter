@@ -16,7 +16,7 @@ namespace idseefeld.de
     /// Put this file into [webroot]\App_Code folder.
     /// You might change the _exportRoot path to your needs. And you may set suitable permissions on that folder.
     /// and put the following line into your master or homepage template:
-    /// @{ var mediaExporter = new ExportMedia(ApplicationContext); var mediaExporterResult = mediaExporter.Export(); }
+    /// @{ var mediaExporter = new idseefeld.de.ExportMedia(ApplicationContext); var mediaExporterResult = mediaExporter.Export(); }
     /// You may display @mediaExporterResult in your html, but that is not necassary.
     /// </summary>
     public class ExportMedia
@@ -119,12 +119,16 @@ namespace idseefeld.de
                     {
                         if (item.ContentType.Alias == "Image")
                         {
-                            var cropperValue = Json.Decode<ImageCropperValue>(umbracoFile);
-                            if (cropperValue.Src != null)
+                            try
                             {
-                                focalPoint = cropperValue.FocalPoint;
-                                umbracoFile = cropperValue.Src;
+                                var cropperValue = Json.Decode<ImageCropperValue>(umbracoFile);
+                                if (cropperValue.Src != null)
+                                {
+                                    focalPoint = cropperValue.FocalPoint;
+                                    umbracoFile = cropperValue.Src;
+                                }
                             }
+                            catch { }
                         }
                         var relativePath = umbracoFile.Trim('/').Replace('/', '\\');
                         umbracoFilePath = Path.Combine(_umbracoRoot, relativePath);
@@ -233,9 +237,12 @@ namespace idseefeld.de
         #endregion
     }
 
+    /// <summary>
+    /// The following ApplicationEventHandler adds automatic execution of ExportMedia.Export() on application start.
+    /// Btw. the application starts when you change this file.
+    /// </summary>
     public class ExportMediaWhenAppStarted : ApplicationEventHandler
     {
-
         protected override void ApplicationStarted(UmbracoApplicationBase umbracoApplication, ApplicationContext applicationContext)
         {
             var webRoot = umbracoApplication.Server.MapPath("/");
