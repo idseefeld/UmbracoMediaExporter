@@ -1,4 +1,6 @@
-# Simple Media Exporter Solution for Umbraco 7
+# Simple Media Exporter Solution for Umbraco
+This is a simple App_Code based solution. The export is only done, when the target folder is empty. Nevertheless you should delete the *.cs file or change the its extension to i.e.: *.cs.excluded.
+
 ## Umbraco 7
 Drop file v7\ExportMedia.cs into your Umbraco webroot folder in App_Code (you may need to create this folder).
 
