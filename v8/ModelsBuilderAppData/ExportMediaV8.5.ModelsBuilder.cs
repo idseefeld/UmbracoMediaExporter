@@ -7,10 +7,18 @@ using System.Web.Helpers;
 using Umbraco.Core;
 using Umbraco.Core.Composing;
 using Umbraco.Core.Logging;
+using Umbraco.Core.Models;
 using Umbraco.Core.Models.PublishedContent;
+using Umbraco.Core.Services;
 using Umbraco.Web;
+using ContentModels = Umbraco.Web.PublishedModels;
+using ImgCropper = Umbraco.Core.PropertyEditors.ValueConverters.ImageCropperValue;
 
-namespace idseefeld.de
+/// <summary>
+/// ModelsBuilder must be in AppData mode and models must be generates in ~/App_Code/Models 
+/// by setting web.config appSettings Umbraco.ModelsBuilder.ModelsDirectory accordingly.
+/// </summary>
+namespace idseefeld.de.ModelsBuilder.AppData
 {
     public interface IExportMediaService
     {
@@ -30,7 +38,7 @@ namespace idseefeld.de
 
         private readonly string _umbracoRoot;
         private readonly ILogger _logger;
-        private readonly bool exportToEmptyFolderOnly = true;
+        private readonly bool exportToEmptyFolderOnly = false;
         private readonly UmbracoHelper _umbracoHelper;
         private readonly UmbracoContext _umbracoContext;
 
@@ -117,33 +125,25 @@ namespace idseefeld.de
                     };
                 }
 
-                var isFolder = item.ContentType.Alias == "Folder";
-                FocalPoint focalPoint = null;
+                var isFolder = item is ContentModels.Folder;
+                ImgCropper.ImageCropperFocalPoint focalPoint = null;
 
                 if (!isFolder)
                 {
-                    var umbracoFile = item.Properties
-                        .FirstOrDefault(p => p.Alias == "umbracoFile")?
-                        .GetValue(umbracoFilePath)
-                        .ToString();
-                    if (!string.IsNullOrEmpty(umbracoFile))
+                    string umbracoFile = null;
+                    var imgItem = item as ContentModels.Image;
+                    var fileItem = item as ContentModels.File;
+                    if (imgItem != null)
                     {
-                        if (item.ContentType.Alias == "Image")
-                        {
-                            try
-                            {
-                                var cropperValue = Json.Decode<ImageCropperValue>(umbracoFile);
-                                if (cropperValue.Src != null)
-                                {
-                                    focalPoint = cropperValue.FocalPoint;
-                                    umbracoFile = cropperValue.Src;
-                                }
-                            }
-                            catch (Exception ex)
-                            {
-                                if (_logger != null) _logger.Error<ExportMediaService>(ex);
-                            }
-                        }
+                        umbracoFile = imgItem.UmbracoFile.Src;
+                        focalPoint = imgItem.UmbracoFile.FocalPoint;
+                    }
+                    else if(fileItem != null)
+                    {
+                        umbracoFile = fileItem.Url();
+                    }
+                    if (!string.IsNullOrEmpty(umbracoFile))
+                    {                        
                         var relativePath = umbracoFile.Trim('/').Replace('/', '\\');
                         umbracoFilePath = Path.Combine(_umbracoRoot, relativePath);
                         extension = Path.GetExtension(umbracoFilePath);
@@ -236,12 +236,11 @@ namespace idseefeld.de
         private class ImageCropperValue
         {
             public string Src { get; set; }
-            public FocalPoint FocalPoint { get; set; }
-        }        
-        private class FocalPoint
+            public ImgCropper.ImageCropperFocalPoint FocalPoint { get; set; }
+        }
+        private class Crop
         {
-            public float Left { get; set; }
-            public float Top { get; set; }
+            public string Name { get; set; }
         }
         private class MediaFolderAndFileInfo
         {
@@ -251,7 +250,7 @@ namespace idseefeld.de
             public string Guid { get; set; }
             public string ExportPath { get; set; }
             public string UmbracoFilePath { get; set; }
-            public FocalPoint FocalPoint { get; set; }
+            public ImgCropper.ImageCropperFocalPoint FocalPoint { get; set; }
             public IEnumerable<MediaFolderAndFileInfo> Children { get; set; }
         }
         private class FixedNames
