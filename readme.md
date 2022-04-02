@@ -4,26 +4,26 @@ This is a simple App_Code based solution. The export is only done, when the targ
 ---
 
 ## Umbraco 7
-Drop file v7\ExportMedia.cs into your Umbraco webroot folder in App_Code (you may need to create this folder).
+Drop file ```.\v7\ExportMedia.cs``` into your Umbraco webroot folder in App_Code (you may need to create this folder).
 
 Edit line 22 of ExportMedia.cs: 
 ```
 private readonly string _exportRoot = "c:\\UmbracoMediaExport";
 //the applicationPool user needs write permission for _exportRoot folder.
 ```
-Currently this solution is tested with Umbraco version 7.14.1 and 7.15.7.
+Currently this solution has been tested with Umbraco version 7.14.1 and 7.15.7.
 
 ---
 
 ## Umbraco 8
-Drop file v8\ExportMediaV8.cs into your Umbraco webroot folder in App_Code (you may need to create this folder).
+Drop file ```.\v8\ExportMediaV8.cs``` into your Umbraco webroot folder in App_Code (you may need to create this folder).
 
 Edit line 24 of ExportMediaV8.cs: 
 ```
 private readonly string _exportRoot = "c:\\UmbracoMediaExport";
 //the applicationPool user needs write permission for _exportRoot folder.
 ```
-Currently this solution is tested with Umbraco version 8.18.2.
+Currently this solution has been tested with Umbraco version 8.18.2.
 
 ### ModelsBuilder Setup with Explicit Models
 If you like to work with typed models in views or controllers you can configure _ModelsBuilder_ in web.config to generate your document types in ~/App_Code eg.:
@@ -41,6 +41,17 @@ ___Do NOT drop both versions for Umbraco 8 into App_Code!___
 ---
 
 ## Umbraco 9
-This will follow very soon.
+Drop file ```.\v9\ExportMediaV9.cs``` into your Umbraco webroot folder in App_Code (you may need to create this folder).
 
-So tune in again... 😉
+You may configure the folder for the export in _appsettings.json_ like so:
+```
+{
+    ...
+    "MediaExporter": {
+        "ExportRootPath": "c:\\MediaExportUmbracoV9.4.2"
+    },
+    ...
+}
+```
+
+Currently this solution has been tested with Umbraco version 9.4.2.
