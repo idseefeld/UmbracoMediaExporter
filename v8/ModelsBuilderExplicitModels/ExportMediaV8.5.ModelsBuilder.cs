@@ -9,8 +9,16 @@ using Umbraco.Core.Composing;
 using Umbraco.Core.Logging;
 using Umbraco.Core.Models.PublishedContent;
 using Umbraco.Web;
+using ContentModels = Umbraco.Web.PublishedModels;
+using ImgCropper = Umbraco.Core.PropertyEditors.ValueConverters.ImageCropperValue;
 
-namespace idseefeld.de
+/// <summary>
+/// ModelsBuilder must be in AppData mode and models must be generates in ~/App_Code/Models 
+/// by setting web.config appSettings Umbraco.ModelsBuilder.ModelsDirectory accordingly.
+/// <add key="Umbraco.ModelsBuilder.ModelsMode" value="AppData"/>
+/// <add key="Umbraco.ModelsBuilder.ModelsDirectory" value="~/App_Code/Models"/>
+/// </summary>
+namespace idseefeld.de.ModelsBuilder.AppData
 {
     public interface IExportMediaService
     {
@@ -31,7 +39,7 @@ namespace idseefeld.de
 
         private readonly string _umbracoRoot;
         private readonly ILogger _logger;
-        private readonly bool exportToEmptyFolderOnly = true;
+        private readonly bool exportToEmptyFolderOnly = false;
         private readonly UmbracoContext _umbracoContext;
         private readonly char[] _invalidFilenameChars = Path.GetInvalidFileNameChars();
 
@@ -41,6 +49,11 @@ namespace idseefeld.de
         #endregion
 
         #region Ctor
+        /// <summary>
+        /// This ctor is called from the register component composer as singleton.
+        /// </summary>
+        /// <param name="umbracoContextFactory"></param>
+        /// <param name="logger"></param>
         public ExportMediaService(IUmbracoContextFactory umbracoContextFactory, ILogger logger)
         {
             _logger = logger;
@@ -53,6 +66,7 @@ namespace idseefeld.de
         }
         #endregion
 
+        #region Methods
         public string Export()
         {
             if (exportStarted) return null;
@@ -69,6 +83,7 @@ namespace idseefeld.de
                     Logger(resultMessage);
                     return resultMessage;
                 }
+
                 var mr = _umbracoContext.Media.GetAtRoot();
                 if (mr == null)
                 {
@@ -86,12 +101,12 @@ namespace idseefeld.de
                 };
 
                 var reportJson = Json.Encode(exportStructur);
-                File.WriteAllText(Path.Combine(_exportRoot, "export-report.json"), reportJson);
+                System.IO.File.WriteAllText(Path.Combine(_exportRoot, "export-report.json"), reportJson);
 
                 if (fixedNames.Count > 0)
                 {
                     reportJson = Json.Encode(fixedNames);
-                    File.WriteAllText(Path.Combine(_exportRoot, "export-fixednames.json"), reportJson);
+                    System.IO.File.WriteAllText(Path.Combine(_exportRoot, "export-fixednames.json"), reportJson);
                 }
 
                 resultMessage = "Media Section exported.";
@@ -104,6 +119,7 @@ namespace idseefeld.de
                 resultMessage = $"Media Section not exported! {Environment.NewLine}{ex.Message} {Environment.NewLine}{ex.Source} {Environment.NewLine}{ex.StackTrace}";
                 System.IO.File.WriteAllText(Path.Combine(_exportRoot, "export-error.json"), resultMessage);
             }
+
             return resultMessage;
         }
         private IEnumerable<MediaFolderAndFileInfo> GetMediaItemsRecursive(IEnumerable<IPublishedContent> mr, string parentPath, List<FixedNames> fixedNames)
@@ -125,33 +141,23 @@ namespace idseefeld.de
                     };
                 }
 
-                var isFolder = item.ContentType.Alias == "Folder";
-                FocalPoint focalPoint = null;
+                var isFolder = item is ContentModels.Folder;
+                ImgCropper.ImageCropperFocalPoint focalPoint = null;
 
                 if (!isFolder)
                 {
-                    var umbracoFile = item.Properties
-                        .FirstOrDefault(p => p.Alias == "umbracoFile")?
-                        .GetValue(umbracoFilePath)
-                        .ToString();
+                    string umbracoFile = null;
+                    if (item is ContentModels.Image imgItem)
+                    {
+                        umbracoFile = imgItem.UmbracoFile.Src;
+                        focalPoint = imgItem.UmbracoFile.FocalPoint;
+                    }
+                    else if (item is ContentModels.File fileItem)
+                    {
+                        umbracoFile = fileItem.Url();
+                    }
                     if (!string.IsNullOrEmpty(umbracoFile))
                     {
-                        if (item.ContentType.Alias == "Image")
-                        {
-                            try
-                            {
-                                var cropperValue = Json.Decode<ImageCropperValue>(umbracoFile);
-                                if (cropperValue.Src != null)
-                                {
-                                    focalPoint = cropperValue.FocalPoint;
-                                    umbracoFile = cropperValue.Src;
-                                }
-                            }
-                            catch (Exception ex)
-                            {
-                                if (_logger != null) _logger.Error<ExportMediaService>(ex);
-                            }
-                        }
                         var relativePath = umbracoFile.Trim('/').Replace('/', '\\');
                         umbracoFilePath = Path.Combine(_umbracoRoot, relativePath);
                         extension = Path.GetExtension(umbracoFilePath);
@@ -177,11 +183,11 @@ namespace idseefeld.de
                 }
                 else
                 {
-                    if (File.Exists(umbracoFilePath))
+                    if (System.IO.File.Exists(umbracoFilePath))
                     {
-                        if (!File.Exists(exportPath))
+                        if (!System.IO.File.Exists(exportPath))
                         {
-                            File.Copy(umbracoFilePath, exportPath);
+                            System.IO.File.Copy(umbracoFilePath, exportPath);
                         }
                     }
                     else
@@ -200,10 +206,7 @@ namespace idseefeld.de
                 var children = item.Children.ToArray();
                 if (children.Length > 0)
                 {
-                    newExportElement.Children = GetMediaItemsRecursive(
-                            children,
-                            exportPath,
-                            fixedNames);
+                    newExportElement.Children = GetMediaItemsRecursive(children, exportPath, fixedNames);
                 }
                 rVal.Add(newExportElement);
             }
@@ -238,18 +241,17 @@ namespace idseefeld.de
                 _logger.Error<ExportMediaService>(ex);
             }
         }
+        #endregion
 
-        #region helper classes
-
+        #region Private helper classes
         private class ImageCropperValue
         {
             public string Src { get; set; }
-            public FocalPoint FocalPoint { get; set; }
+            public ImgCropper.ImageCropperFocalPoint FocalPoint { get; set; }
         }
-        private class FocalPoint
+        private class Crop
         {
-            public float Left { get; set; }
-            public float Top { get; set; }
+            public string Name { get; set; }
         }
         private class MediaFolderAndFileInfo
         {
@@ -259,7 +261,7 @@ namespace idseefeld.de
             public string Guid { get; set; }
             public string ExportPath { get; set; }
             public string UmbracoFilePath { get; set; }
-            public FocalPoint FocalPoint { get; set; }
+            public ImgCropper.ImageCropperFocalPoint FocalPoint { get; set; }
             public IEnumerable<MediaFolderAndFileInfo> Children { get; set; }
         }
         private class FixedNames
@@ -272,21 +274,20 @@ namespace idseefeld.de
     }
 
     #region register IComponent to execute ExportMediaService.Export() on HttpApplication.BeginRequest with IComposer
-
-    public class ExportMediaWhenAppStartedComposer : IComposer
+    public class ExportMediaWhenAppStartedWithExplicitModelsComposer : IUserComposer
     {
         public void Compose(Composition composition)
         {
             composition.Register<IExportMediaService, ExportMediaService>(Lifetime.Singleton);
-            composition.Components().Append<ExportMediaWhenAppStartedComponent>();
+            composition.Components().Append<ExportMediaWhenAppStartedWithExplicitModelsComponent>();
         }
     }
 
-    public class ExportMediaWhenAppStartedComponent : IComponent
+    public class ExportMediaWhenAppStartedWithExplicitModelsComponent : IComponent
     {
         private readonly IExportMediaService _exportMediaService;
 
-        public ExportMediaWhenAppStartedComponent(IExportMediaService exportMediaService)
+        public ExportMediaWhenAppStartedWithExplicitModelsComponent(IExportMediaService exportMediaService)
         {
             _exportMediaService = exportMediaService;
         }

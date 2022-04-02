@@ -20,3 +20,19 @@ private readonly string _exportRoot = "c:\\UmbracoMediaExport";
 //the applicationPool user needs write permission for _exportRoot folder.
 ```
 Currently this solution is tested with Umbraco version 8.18.2.
+
+### ModelsBuilder Setup with Explicit Models
+If you like to work with typed models in views or controllers you can configure _ModelsBuilder_ in web.config to generate your document types in ~/App_Code eg.:
+
+```
+<appSettings>
+    ...
+    <add key="Umbraco.ModelsBuilder.ModelsMode" value="AppData" />
+	<add key="Umbraco.ModelsBuilder.ModelsDirectory" value="~/App_Code/Models" />
+```
+For this case you may use ```\v8\ModelsBuilderExplicitModels\ExportMediaV8.5.ModelsBuilder.cs``` 
+
+## Umbraco 9
+This will follow very soon.
+
+So tune in again... 😉
