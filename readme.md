@@ -1,6 +1,8 @@
 # Simple Media Exporter Solution for Umbraco
 This is a simple App_Code based solution. The export is only done, when the target folder is empty. Nevertheless you should delete the *.cs file or change the its extension to i.e.: *.cs.excluded.
 
+---
+
 ## Umbraco 7
 Drop file v7\ExportMedia.cs into your Umbraco webroot folder in App_Code (you may need to create this folder).
 
@@ -10,6 +12,8 @@ private readonly string _exportRoot = "c:\\UmbracoMediaExport";
 //the applicationPool user needs write permission for _exportRoot folder.
 ```
 Currently this solution is tested with Umbraco version 7.14.1 and 7.15.7.
+
+---
 
 ## Umbraco 8
 Drop file v8\ExportMediaV8.cs into your Umbraco webroot folder in App_Code (you may need to create this folder).
@@ -31,6 +35,10 @@ If you like to work with typed models in views or controllers you can configure 
 	<add key="Umbraco.ModelsBuilder.ModelsDirectory" value="~/App_Code/Models" />
 ```
 For this case you may use ```\v8\ModelsBuilderExplicitModels\ExportMediaV8.5.ModelsBuilder.cs``` 
+
+___Do NOT drop both versions for Umbraco 8 into App_Code!___
+
+---
 
 ## Umbraco 9
 This will follow very soon.
